@@ -1,1 +1,1 @@
-# Minecraft-Client-Side-Server-Protocol
+# Minecraft Client-Side Server Protocol
