@@ -836,7 +836,8 @@ namespace Craft.Net.Networking
 
         public int EntityId;
         public string PlayerName, UUID;
-        // Data Count might be used for looping
+        // Data is the skin and cape, if they have one, of the player
+        // No changes may need to be made if the Mojang API still accepts these requests
         public int DataCount;
         public string DataName, DataValue, DataSignature;
         public int X, Y, Z;
