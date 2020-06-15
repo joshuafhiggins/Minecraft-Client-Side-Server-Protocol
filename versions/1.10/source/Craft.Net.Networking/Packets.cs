@@ -9,6 +9,20 @@ using Newtonsoft.Json;
 
 namespace Craft.Net.Networking
 {
+    public class Utils
+    {
+        public static string UUIDConverter(string uuid)
+        {
+            //UUIDs now need dashes (-) //Servers don't send them with them //Format: 8-4-4-4-12
+            string uuid1 = uuid.Substring(0, 7);
+            string uuid2 = uuid.Substring(7, 11);
+            string uuid3 = uuid.Substring(11, 15);
+            string uuid4 = uuid.Substring(15, 19);
+            string uuid5 = uuid.Substring(19, 31);
+            return uuid1 + "-" + uuid2 + "-" + uuid3 + "-" + uuid4 + "-" + uuid5;
+        }
+    }
+
     public interface IPacket
     {
         /// <summary>
@@ -206,7 +220,7 @@ namespace Craft.Net.Networking
     {
         public LoginSuccessPacket(string uuid, string username)
         {
-            UUID = uuid;
+            UUID = Utils.UUIDConverter(uuid);
             Username = username;
         }
 
@@ -801,12 +815,16 @@ namespace Craft.Net.Networking
 
     public struct SpawnPlayerPacket : IPacket
     {
-        public SpawnPlayerPacket(int entityId, string uuid, string playerName, int x,
+        public SpawnPlayerPacket(int entityId, string uuid, string playerName, int dataCount, string dataName, string dataValue, string dataSignature, int x,
             int y, int z, byte yaw, byte pitch, short heldItem, MetadataDictionary metadata)
         {
             EntityId = entityId;
-            UUID = uuid;
+            UUID = Utils.UUIDConverter(uuid);
             PlayerName = playerName;
+            DataCount = dataCount;
+            DataName = dataName;
+            DataValue = dataValue;
+            DataSignature = dataSignature;
             X = x;
             Y = y;
             Z = z;
@@ -818,6 +836,9 @@ namespace Craft.Net.Networking
 
         public int EntityId;
         public string PlayerName, UUID;
+        // Data Count might be used for looping
+        public int DataCount;
+        public string DataName, DataValue, DataSignature;
         public int X, Y, Z;
         public byte Yaw, Pitch;
         public short HeldItem;
@@ -826,8 +847,12 @@ namespace Craft.Net.Networking
         public NetworkMode ReadPacket(MinecraftStream stream, NetworkMode mode, PacketDirection direction)
         {
             EntityId = stream.ReadVarInt();
-            UUID = stream.ReadString();
+            UUID = Utils.UUIDConverter(stream.ReadString());
             PlayerName = stream.ReadString();
+            DataCount = stream.ReadVarInt();
+            DataName = stream.ReadString();
+            DataValue = stream.ReadString();
+            DataSignature = stream.ReadString();
             X = stream.ReadInt32();
             Y = stream.ReadInt32();
             Z = stream.ReadInt32();
@@ -843,6 +868,10 @@ namespace Craft.Net.Networking
             stream.WriteVarInt(EntityId);
             stream.WriteString(UUID);
             stream.WriteString(PlayerName);
+            stream.WriteVarInt(DataCount);
+            stream.WriteString(DataName);
+            stream.WriteString(DataValue);
+            stream.WriteString(DataSignature);
             stream.WriteInt32(X);
             stream.WriteInt32(Y);
             stream.WriteInt32(Z);

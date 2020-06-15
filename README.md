@@ -27,6 +27,6 @@ Progress:
 1.9.2 - Not Started!\
 1.9.1 - Not Started!\
 1.9 - Not Started!\
-1.8.x - Not Started!\
-1.7.6 / 1.7.10 - Working on...\
+1.8.x - Working on...\
+1.7.6 / 1.7.10 - Testing...\
 1.7.4 / 1.7.5 - Done!
