@@ -8,8 +8,9 @@ namespace Craft.Net.Networking
 {
     public class NetworkManager
     {
-        public const int ProtocolVersion = 4;
-        public const string FriendlyVersion = "1.7.5";
+        public const int ProtocolVersion = 5;
+        //FriendlyVersion doesn't seem to be in use.
+        public const string FriendlyVersion = "1.7.10";
 
         public NetworkMode NetworkMode { get; private set; }
         public bool Strict { get; set; }
