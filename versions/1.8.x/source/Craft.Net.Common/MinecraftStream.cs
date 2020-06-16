@@ -109,6 +109,42 @@ namespace Craft.Net.Common
             return length;
         }
 
+        public long ReadVarLong()
+        {
+            int numRead = 0;
+            long result = 0;
+            byte read;
+            do
+            {
+                read = (byte)ReadByte();
+                int value = (read & 0b01111111);
+                result |= (value << (7 * numRead));
+
+                numRead++;
+                if (numRead > 10)
+                {
+                    throw new ArgumentOutOfRangeException("VarLong is too big");
+                }
+            } while ((read & 0b10000000) != 0);
+
+            return result;
+        }
+
+        public void WriteVarLong(long value)
+        {
+            do
+            {
+                byte temp = (byte)(value & 0b01111111);
+                // Note: >>> means that the sign bit is shifted with the rest of the number rather than being left alone
+                value >>= 7;
+                if (value != 0)
+                {
+                    temp |= 0b10000000;
+                }
+                WriteInt64(temp);
+            } while (value != 0);
+        }
+
         public byte ReadUInt8()
         {
             int value = BaseStream.ReadByte();
