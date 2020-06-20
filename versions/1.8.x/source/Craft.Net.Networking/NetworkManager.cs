@@ -100,6 +100,8 @@ namespace Craft.Net.Networking
             serverbound.Add(typeof(ClientSettingsPacket));
             serverbound.Add(typeof(ClientStatusPacket));
             serverbound.Add(typeof(PluginMessagePacket));
+            //Spectator Packet
+            serverbound.Add(typeof(ResourcePackStatus));
 
             clientbound.Add(typeof(KeepAlivePacket)); // Clientbound
             clientbound.Add(typeof(JoinGamePacket));
@@ -166,6 +168,15 @@ namespace Craft.Net.Networking
             clientbound.Add(typeof(SetTeamsPacket));
             clientbound.Add(typeof(PluginMessagePacket));
             clientbound.Add(typeof(DisconnectPacket));
+            clientbound.Add(typeof(ServerDifficultyPacket));
+            clientbound.Add(typeof(CombatEventPacket));
+            clientbound.Add(typeof(CameraPacket));
+            //World Border
+            clientbound.Add(typeof(TitlePacket));
+            clientbound.Add(typeof(SetCompressionPacket));
+            clientbound.Add(typeof(PlayerListHeadAndFooterPacket));
+            clientbound.Add(typeof(ResourcePackSend));
+            clientbound.Add(typeof(UpdateEntityNBTPacket));
             PlayPackets = Populate(serverbound, clientbound);
 
             NetworkModes = new Type[][][]
