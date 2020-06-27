@@ -171,7 +171,7 @@ namespace Craft.Net.Networking
             clientbound.Add(typeof(ServerDifficultyPacket));
             clientbound.Add(typeof(CombatEventPacket));
             clientbound.Add(typeof(CameraPacket));
-            //World Border
+            clientbound.Add(typeof(WorldBorderPacket));
             clientbound.Add(typeof(TitlePacket));
             clientbound.Add(typeof(SetCompressionPacket));
             clientbound.Add(typeof(PlayerListHeadAndFooterPacket));

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Security.Authentication.ExtendedProtection.Configuration;
 using System.Text;
 using Craft.Net.Common;
 using fNbt;
@@ -1653,26 +1654,25 @@ namespace Craft.Net.Networking
 
     public struct MultipleBlockChangePacket : IPacket
     {
-        public MultipleBlockChangePacket(int chunkX, int chunkZ, short recordCount, int[] data)
+        public MultipleBlockChangePacket(int chunkX, int chunkZ, byte[] data)
         {
             // TODO: Make this packet a little nicer
             ChunkX = chunkX;
             ChunkZ = chunkZ;
-            RecordCount = recordCount;
             Data = data;
+            RecordCount = Data.Length;
         }
 
         public int ChunkX, ChunkZ;
-        public short RecordCount;
-        public int[] Data;
+        public byte[] Data;
+        public int RecordCount;
 
         public NetworkMode ReadPacket(MinecraftStream stream, NetworkMode mode, PacketDirection direction)
         {
             ChunkX = stream.ReadInt32();
             ChunkZ = stream.ReadInt32();
-            RecordCount = stream.ReadInt16();
-            stream.ReadInt32();
-            Data = stream.ReadInt32Array(RecordCount);
+            int RecordCount = stream.ReadVarInt();
+            Data = stream.ReadUInt8Array(RecordCount);
             return mode;
         }
 
@@ -1680,9 +1680,8 @@ namespace Craft.Net.Networking
         {
             stream.WriteInt32(ChunkX);
             stream.WriteInt32(ChunkZ);
-            stream.WriteInt16(RecordCount);
-            stream.WriteInt32(RecordCount * 4);
-            stream.WriteInt32Array(Data);
+            stream.WriteVarInt(RecordCount);
+            stream.WriteUInt8Array(Data);
             return mode;
         }
     }
@@ -2106,7 +2105,7 @@ namespace Craft.Net.Networking
 
     public struct OpenWindowPacket : IPacket
     {
-        public OpenWindowPacket(byte windowId, byte inventoryType, string windowTitle,
+        public OpenWindowPacket(byte windowId, string inventoryType, string windowTitle,
             byte slotCount, bool useProvidedTitle, int? entityId)
         {
             WindowId = windowId;
@@ -2118,7 +2117,7 @@ namespace Craft.Net.Networking
         }
 
         public byte WindowId;
-        public byte InventoryType;
+        public string InventoryType;
         public string WindowTitle;
         public byte SlotCount;
         public bool UseProvidedTitle;
@@ -2127,11 +2126,11 @@ namespace Craft.Net.Networking
         public NetworkMode ReadPacket(MinecraftStream stream, NetworkMode mode, PacketDirection direction)
         {
             WindowId = stream.ReadUInt8();
-            InventoryType = stream.ReadUInt8();
+            InventoryType = stream.ReadString();
             WindowTitle = stream.ReadString();
             SlotCount = stream.ReadUInt8();
             UseProvidedTitle = stream.ReadBoolean();
-            if (InventoryType == 11)
+            if (InventoryType == "EntityHorse")
                 EntityId = stream.ReadInt32();
             return mode;
         }
@@ -2139,11 +2138,11 @@ namespace Craft.Net.Networking
         public NetworkMode WritePacket(MinecraftStream stream, NetworkMode mode, PacketDirection direction)
         {
             stream.WriteUInt8(WindowId);
-            stream.WriteUInt8(InventoryType);
+            stream.WriteString(InventoryType);
             stream.WriteString(WindowTitle);
             stream.WriteUInt8(SlotCount);
             stream.WriteBoolean(UseProvidedTitle);
-            if (InventoryType == 11)
+            if (InventoryType == "EntityHorse")
                 stream.WriteInt32(EntityId.GetValueOrDefault());
             return mode;
         }
@@ -2629,30 +2628,136 @@ namespace Craft.Net.Networking
 
     public struct PlayerListItemPacket : IPacket
     {
-        public PlayerListItemPacket(string playerName, bool online, int ping)
+        public PlayerListItemPacket(int numberOfPlayers, string uuid, string name, int numberOfProperties, string[] property, int gamemode, int ping, string displayName)
         {
-            PlayerName = playerName;
-            Online = online;
+            Action = 0;
+            NumberOfPlayers = numberOfPlayers;
+            UUID = uuid;
+
+            Name = name;
+            NumberOfProperties = numberOfProperties;
+            Property = property;
+            Gamemode = gamemode;
             Ping = ping;
+            DisplayName = displayName;
         }
 
-        public string PlayerName;
-        public bool Online;
+        public PlayerListItemPacket(int action, int numberOfPlayers, string uuid, int gamemodeOrPing)
+        {
+            Action = action;
+            NumberOfPlayers = numberOfPlayers;
+            UUID = uuid;
+
+            Name = null;
+            NumberOfProperties = -1;
+            Property = null;
+            Gamemode = -1;
+            Ping = -1;
+            DisplayName = null;
+
+            if (Action == 1)
+            {
+                Gamemode = gamemodeOrPing;
+            }
+            else
+            {
+                Ping = gamemodeOrPing;
+            }
+        }
+
+        public PlayerListItemPacket(int numberOfPlayers, string uuid, string displayName)
+        {
+            Action = 3;
+            NumberOfPlayers = numberOfPlayers;
+            UUID = uuid;
+
+            Name = null;
+            NumberOfProperties = -1;
+            Property = null;
+            Gamemode = -1;
+            Ping = -1;
+            DisplayName = null;
+
+            if (displayName != null)
+            {
+                DisplayName = displayName;
+            }
+        }
+
+        public PlayerListItemPacket(int numberOfPlayers, string uuid)
+        {
+            Action = 4;
+            NumberOfPlayers = numberOfPlayers;
+            UUID = uuid;
+
+            Name = null;
+            NumberOfProperties = -1;
+            Property = null;
+            Gamemode = -1;
+            Ping = -1;
+            DisplayName = null;
+        }
+
+        public int Action;
+        public int NumberOfPlayers;
+
+        public string UUID;
+
+        public string Name;
+        public int NumberOfProperties;
+        public string[] Property;
+        public int Gamemode;
         public int Ping;
+
+        public string DisplayName;
 
         public NetworkMode ReadPacket(MinecraftStream stream, NetworkMode mode, PacketDirection direction)
         {
-            PlayerName = stream.ReadString();
-            Online = stream.ReadBoolean();
-            Ping = stream.ReadVarInt();
+            Action = stream.ReadVarInt();
+            NumberOfPlayers = stream.ReadVarInt();
+            UUID = stream.ReadString();
+
+            if (Action == 0)
+            {
+                Name = stream.ReadString();
+                NumberOfProperties = stream.ReadVarInt();
+                Property[0] = stream.ReadString();
+                Property[1] = stream.ReadString();
+                if (stream.ReadBoolean() == true)
+                {
+                    Property[2] = stream.ReadString();
+                }
+                Gamemode = stream.ReadVarInt();
+                Ping = stream.ReadVarInt();
+                if (stream.ReadBoolean() == true)
+                {
+                    DisplayName = stream.ReadString();
+                }
+            }
+            if (Action == 1)
+            {
+                Gamemode = stream.ReadVarInt();
+            }
+            if (Action == 2)
+            {
+                Ping = stream.ReadVarInt();
+            }
+            if (Action == 3)
+            {
+                if (stream.ReadBoolean() == true)
+                {
+                    DisplayName = stream.ReadString();
+                }
+            }
+            if (Action == 4)
+            {
+                //Remove Player
+            }
             return mode;
         }
 
         public NetworkMode WritePacket(MinecraftStream stream, NetworkMode mode, PacketDirection direction)
         {
-            stream.WriteString(PlayerName);
-            stream.WriteBoolean(Online);
-            stream.WriteVarInt(Ping);
             return mode;
         }
     }
@@ -3530,7 +3635,183 @@ namespace Craft.Net.Networking
         }
     }
 
-    //World Border Packet
+    public struct WorldBorderPacket : IPacket
+    {
+        //Action==0
+        public WorldBorderPacket(double radius)
+        {
+            Action = 0;
+            
+            X = 0;
+            Z = 0;
+            Radius = radius;
+            OldRadius = 0;
+            NewRadius = 0;
+            Speed = 0;
+            PortalTeleportBoundary = 0;
+            WarningTime = 0;
+            WarningBlocks = 0;
+        }
+
+        //Action==1
+        public WorldBorderPacket(double oldRadius, double newRadius, long speed)
+        {
+            Action = 1;
+            
+            X = 0;
+            Z = 0;
+            Radius = 0;
+            OldRadius = oldRadius;
+            NewRadius = newRadius;
+            Speed = speed;
+            PortalTeleportBoundary = 0;
+            WarningTime = 0;
+            WarningBlocks = 0;
+        }
+
+        //Action==2
+        public WorldBorderPacket(double x, double z)
+        {
+            Action = 2;
+
+            X = x;
+            Z = z;
+            Radius = 0;
+            OldRadius = 0;
+            NewRadius = 0;
+            Speed = 0;
+            PortalTeleportBoundary = 0;
+            WarningTime = 0;
+            WarningBlocks = 0;
+        }
+
+        //Action==3
+        public WorldBorderPacket(double x, double z, double oldRadius, double newRadius, long speed, int portalTeleportBoundary, int warningTime, int warningBlocks)
+        {
+            Action = 3;
+
+            X = x;
+            Z = z;
+            Radius = 0;
+            OldRadius = oldRadius;
+            NewRadius = newRadius;
+            Speed = speed;
+            PortalTeleportBoundary = portalTeleportBoundary;
+            WarningTime = warningTime;
+            WarningBlocks = warningBlocks;
+        }
+
+        //Action==4 && 5
+        public WorldBorderPacket(int action, int warningTimeOrBlocks)
+        {
+            Action = action;
+            if(Action == 4)
+            {
+                WarningTime = warningTimeOrBlocks;
+                WarningBlocks = 0;
+            }
+            else
+            {
+                WarningTime = 0;
+                WarningBlocks = warningTimeOrBlocks;
+            }
+
+            X = 0;
+            Z = 0;
+            Radius = 0;
+            OldRadius = 0;
+            NewRadius = 0;
+            Speed = 0;
+            PortalTeleportBoundary = 0;
+            WarningTime = 0;
+            WarningBlocks = 0;
+        }
+
+        public int Action;
+        public double Radius, X, Z, OldRadius, NewRadius;
+        public long Speed; 
+        public int PortalTeleportBoundary, WarningTime, WarningBlocks;
+
+        public NetworkMode ReadPacket(MinecraftStream stream, NetworkMode mode, PacketDirection direction)
+        {
+            Action = stream.ReadVarInt();
+            if (Action == 0)
+            {
+                Radius = stream.ReadDouble();
+            }
+            if (Action == 1)
+            {
+                OldRadius = stream.ReadDouble();
+                NewRadius = stream.ReadDouble();
+                Speed = stream.ReadVarLong();
+            }
+            if (Action == 2)
+            {
+                X = stream.ReadDouble();
+                Z = stream.ReadDouble();
+            }
+            if (Action == 3)
+            {
+                X = stream.ReadDouble();
+                Z = stream.ReadDouble();
+                OldRadius = stream.ReadDouble();
+                NewRadius = stream.ReadDouble();
+                Speed = stream.ReadVarLong();
+                PortalTeleportBoundary = stream.ReadVarInt();
+                WarningTime = stream.ReadVarInt();
+                WarningBlocks = stream.ReadVarInt();
+            }
+            if (Action == 4)
+            {
+                WarningTime = stream.ReadVarInt();
+            }
+            if (Action == 5)
+            {
+                WarningBlocks = stream.ReadVarInt();
+            }
+            return mode;
+        }
+
+        public NetworkMode WritePacket(MinecraftStream stream, NetworkMode mode, PacketDirection direction)
+        {
+            stream.WriteVarInt(Action);
+            if (Action == 0)
+            {
+                stream.WriteDouble(Radius);
+            }
+            if (Action == 1)
+            {
+                stream.WriteDouble(OldRadius);
+                stream.WriteDouble(NewRadius);
+                stream.WriteVarLong(Speed);
+            }
+            if (Action == 2)
+            {
+                stream.WriteDouble(X);
+                stream.WriteDouble(Z);
+            }
+            if (Action == 3)
+            {
+                stream.WriteDouble(X);
+                stream.WriteDouble(Z);
+                stream.WriteDouble(OldRadius);
+                stream.WriteDouble(NewRadius);
+                stream.WriteVarLong(Speed);
+                stream.WriteVarInt(PortalTeleportBoundary);
+                stream.WriteVarInt(WarningTime);
+                stream.WriteVarInt(WarningBlocks);
+            }
+            if (Action == 4)
+            {
+                stream.WriteVarInt(WarningTime);
+            }
+            if (Action == 5)
+            {
+                stream.WriteVarInt(WarningBlocks);
+            }
+            return mode;
+        }
+    }
 
     public struct TitlePacket : IPacket
     {
